@@ -7,8 +7,11 @@ pytest를 사용하여 API 엔드포인트를 테스트합니다.
     uv run pytest tests/test_api.py -v
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.messages import AIMessage, HumanMessage
 
 from app.main import app
 
@@ -28,9 +31,6 @@ class TestRootEndpoint:
         assert response.status_code == 307  # RedirectResponse
         assert "/ui" in response.headers.get("location", "")
 
-
-from langchain_core.messages import HumanMessage, AIMessage
-from unittest.mock import AsyncMock, patch
 
 class TestChatEndpoints:
     """채팅 API 엔드포인트 테스트"""
@@ -58,7 +58,7 @@ class TestChatEndpoints:
                 "session_id": "test-session",
             },
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "반가워! 루미야~"
@@ -83,4 +83,3 @@ class TestChatEndpoints:
             },
         )
         assert response.status_code == 422
-

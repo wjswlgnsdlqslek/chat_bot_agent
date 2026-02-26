@@ -19,7 +19,6 @@ import gradio as gr
 from loguru import logger
 
 
-
 def sanitize_for_gradio_markdown(text: str) -> str:
     """
     Gradio 마크다운 렌더링 문제 수정

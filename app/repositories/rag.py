@@ -14,9 +14,10 @@ RAG(Retrieval-Augmented Generation)를 위한 문서 검색 Repository
 """
 
 from typing import Literal
-from loguru import logger
+
 from langchain_upstage import UpstageEmbeddings
-from supabase import create_client, Client
+from loguru import logger
+from supabase import Client, create_client
 
 from app.core.config import settings
 
@@ -42,13 +43,11 @@ class RAGRepository:
         RAGRepository 초기화
         """
         self.embeddings = UpstageEmbeddings(
-            api_key=settings.upstage_api_key,
-            model="solar-embedding-1-large-passage"
+            api_key=settings.upstage_api_key, model="solar-embedding-1-large-passage"
         )
 
         self.supabase: Client = create_client(
-            settings.supabase_url,
-            settings.supabase_key
+            settings.supabase_url, settings.supabase_key
         )
 
         logger.info("RAGRepository 초기화 완료 (필터링 지원)")
@@ -57,7 +56,7 @@ class RAGRepository:
         self,
         query: str,
         k: int = 3,
-        filter_status: Literal["active", "deprecated", "all"] = "active",  
+        filter_status: Literal["active", "deprecated", "all"] = "active",
     ) -> list[dict]:
         """
         쿼리와 유사한 문서를 검색합니다.
@@ -101,8 +100,8 @@ class RAGRepository:
                 {
                     "query_embedding": query_embedding,
                     "match_count": k,
-                    "filter_status": filter_status  # 필터링!
-                }
+                    "filter_status": filter_status,  # 필터링!
+                },
             ).execute()
 
             docs = result.data or []
@@ -168,11 +167,18 @@ class RAGRepository:
         """
         try:
             if filter_status == "all":
-                result = self.supabase.table("documents").select("id", count="exact").execute()
+                result = (
+                    self.supabase.table("documents")
+                    .select("id", count="exact")
+                    .execute()
+                )
             else:
-                result = self.supabase.table("documents").select("id", count="exact").eq(
-                    "metadata->>status", filter_status
-                ).execute()
+                result = (
+                    self.supabase.table("documents")
+                    .select("id", count="exact")
+                    .eq("metadata->>status", filter_status)
+                    .execute()
+                )
 
             return result.count or 0
         except Exception as e:
