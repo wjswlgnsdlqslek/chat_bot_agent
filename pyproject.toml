@@ -1,5 +1,5 @@
 [project]
-name = "prac"
+name = "chat_bot_agent"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -130,6 +130,11 @@ exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
 ]
 
 
