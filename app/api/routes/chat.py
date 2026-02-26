@@ -7,15 +7,15 @@ LangGraph 에이전트를 호출하여 사용자 메시지를 처리합니다.
     POST /chat/          - 채팅 메시지 전송
 """
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage
 from loguru import logger
 
-from app.schemas.chat import ChatRequest, ChatResponse, StreamEvent
 from app.graph import get_lumi_graph
+from app.schemas.chat import ChatRequest, ChatResponse, StreamEvent
 
 router = APIRouter()
 
@@ -76,7 +76,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         tool_used = final_state.get("tool_name")
 
         logger.info(f"📤 응답 전송: tool_used={tool_used}")
-        
+
         # TODO 5: ChatResponse 반환
         return ChatResponse(
             message=ai_response,
@@ -90,6 +90,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             status_code=500,
             detail=f"에이전트 처리 중 오류가 발생했습니다: {str(e)}",
         )
+
 
 # SSE 스트리밍 - Helper 함수
 async def stream_with_status(
@@ -147,7 +148,9 @@ async def stream_with_status(
     }
 
     # TODO 2: 스트리밍 모드 설정
-    async for mode, event in graph.astream(initial_state, stream_mode=["updates", "messages"]):  # type: ignore # stream_mode 수정!
+    async for mode, event in graph.astream(
+        initial_state, stream_mode=["updates", "messages"]
+    ):  # type: ignore # stream_mode 수정!
         # TODO 3: 노드 스트리밍 (mode == "updates")
         if mode == "updates":
             for node_name, node_output in event.items():
@@ -156,16 +159,16 @@ async def stream_with_status(
                     current_node = node_name
                     yield (node_status[node_name], None, None, None)
                     logger.debug(f"[stream_with_status] 노드 진입: {node_name}")
-                    
-                if node_name =="tool" and node_output:
+
+                if node_name == "tool" and node_output:
                     final_tool_name = node_output.get("tool_name")
-                    
+
         # TODO 4: 토큰 스트리밍 (mode == "messages")
-        elif mode == "messages":    
+        elif mode == "messages":
             msg, meta = event
             # 여기에 구현하세요!
             node_name = meta.get("langgraph_node", "")
-            
+
             if node_name != "response":
                 continue
             if isinstance(msg, AIMessageChunk):
@@ -221,18 +224,17 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 # TODO 5: 이벤트 타입별(thinking, token, response) SSE 전송
                 if status:
                     yield StreamEvent(type="thinking", content=status).to_sse()
-                    
-                    
-                    
+
                 if token:
                     yield StreamEvent(type="token", content=token).to_sse()
                 if final:
-                    yield StreamEvent(type="response", content=final, tool_used=tool_used).to_sse()
+                    yield StreamEvent(
+                        type="response", content=final, tool_used=tool_used
+                    ).to_sse()
 
             # TODO 6: 완료 이벤트 전송
             yield StreamEvent(type="done").to_sse()
             logger.info(f"✅ [Stream] 완료: session={request.session_id}")
-
 
         except Exception as e:
             logger.error(f"❌ [Stream] 오류: {e}")
@@ -247,5 +249,5 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             "Connection": "keep-alive",
             "X-Accel-buffering": "no",
             "Content-Type": "text/event-stream",
-        }
-    )  
+        },
+    )

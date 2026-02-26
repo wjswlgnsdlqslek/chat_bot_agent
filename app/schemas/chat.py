@@ -1,9 +1,12 @@
-from pydantic import BaseModel, Field
-from typing import Any, Literal, Optional
 from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
 
 class ChatRequest(BaseModel):
     """user -> server chat request schema."""
+
     message: str = Field(
         ...,
         min_length=1,
@@ -11,7 +14,7 @@ class ChatRequest(BaseModel):
         description="사용자의 메시지입니다. 1자 이상, 1000자 이하로 입력해주세요.",
         examples=["오늘 방송 언제야?", "노래 추천해줘"],
     )
-    
+
     session_id: str = Field(
         ...,
         min_length=1,
@@ -19,36 +22,38 @@ class ChatRequest(BaseModel):
         description="세션 ID입니다.",
         examples=["session_1234567890"],
     )
-    
-    user_id: Optional[str] = Field(
+
+    user_id: str | None = Field(
         default=None,
         max_length=100,
         description="사용자 식별자 (선택)",
     )
-    
+
+
 class ChatResponse(BaseModel):
     """server -> user chat response schema."""
+
     message: str = Field(
         ...,
         description="서버의 응답 메시지입니다.",
     )
-    
-    tool_used: Optional[str] = Field(
+
+    tool_used: str | None = Field(
         default=None,
         description="사용된 도구의 이름입니다. 도구가 사용되지 않은 경우 None입니다.",
         examples=["search", "calculator", None],
     )
-    
+
     cached: bool = Field(
         default=False,
         description="이 응답이 캐시된 결과인지 여부입니다.",
     )
-    
+
     timestamp: datetime = Field(
         default_factory=datetime.utcnow,
         description="응답이 생성된 시간입니다.",
     )
-    
+
 
 # TODO 1: StreamEventType 정의
 StreamEventType = Literal["thinking", "tool", "token", "response", "error", "done"]
@@ -99,15 +104,12 @@ class StreamEvent(BaseModel):
     """
 
     # TODO 2: type 필드 정의
-    type: StreamEventType = Field(
-        ...,
-        description="envet type"
-    )
-    
-    node: Optional[str] = Field(
+    type: StreamEventType = Field(..., description="envet type")
+
+    node: str | None = Field(
         default=None,
         description="g현재 실행중인 노드 이름",
-        examples=["router", "rag", "tool", "response"]
+        examples=["router", "rag", "tool", "response"],
     )
 
     # TODO 3: content 필드 정의
@@ -147,7 +149,7 @@ class StreamEvent(BaseModel):
         import orjson
 
         # TODO 4: SSE 형식으로 변환. utf-8로 디코딩
-        data = {k : v for k, v in self.model_dump().items() if v is not None}
+        data = {k: v for k, v in self.model_dump().items() if v is not None}
         json_str = orjson.dumps(data).decode("utf-8")
-        
+
         return f"data: {json_str}\n\n"

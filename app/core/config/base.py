@@ -6,9 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class BaseAppSettings(BaseSettings):
     """공통 애플리케이션 설정."""
 
-    environment: Literal["development", "production", "staging", "test"] = (
-        "development"
-    )
+    environment: Literal["development", "production", "staging", "test"] = "development"
     debug: bool = False
     upstage_api_key: str = ""
     llm_model: str = "solar-pro2"

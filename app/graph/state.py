@@ -10,7 +10,8 @@ TypedDict를 사용하여 타입 안전하게 정의합니다.
     - Annotated[list, add_messages]를 사용하면 메시지가 자동으로 추가됨
 """
 
-from typing import Any, TypedDict, Literal, Annotated
+from typing import Annotated, Any, Literal, TypedDict
+
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
@@ -43,6 +44,7 @@ class LumiState(TypedDict):
         ...     "tool_result": None,
         ... }
     """
+
     # TODO 1: messages 필드 정의
     messages: Annotated[list[BaseMessage], add_messages]
     # TODO 2: intent 필드 정의

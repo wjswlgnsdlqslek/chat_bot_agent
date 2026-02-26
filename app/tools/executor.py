@@ -117,8 +117,16 @@ class ToolExecutor:
 
         playlist = {
             "신남": ["NewJeans - Super Shy", "IVE - I AM", "LE SSERAFIM - ANTIFRAGILE"],
-            "잔잔": ["AKMU - 어떻게 이별까지 사랑하겠어", "아이유 - 밤편지", "Paul Kim - 모든 날, 모든 순간"],
-            "집중": ["Nujabes - Aruarian Dance", "Yiruma - River Flows in You", "Lofi Girl Mix"],
+            "잔잔": [
+                "AKMU - 어떻게 이별까지 사랑하겠어",
+                "아이유 - 밤편지",
+                "Paul Kim - 모든 날, 모든 순간",
+            ],
+            "집중": [
+                "Nujabes - Aruarian Dance",
+                "Yiruma - River Flows in You",
+                "Lofi Girl Mix",
+            ],
         }
 
         picks = playlist.get(mood, playlist["신남"])

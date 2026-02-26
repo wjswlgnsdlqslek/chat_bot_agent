@@ -1,10 +1,11 @@
+import sys
 from contextlib import asynccontextmanager
+
 import gradio as gr
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from loguru import logger
-import sys
 
 from app.api.routes import api_router
 from app.core.config import settings
@@ -18,7 +19,8 @@ logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
     level="DEBUG" if settings.debug else "INFO",
     colorize=True,
-    )
+)
+
 
 # 5. @asynccontextmanager 데코레이터
 @asynccontextmanager
@@ -35,15 +37,19 @@ async def lifespan(app: FastAPI):
     yield  # 이 지점에서 서버가 요청을 처리함
 
     logger.info("Lumi Agent 서버를 종료합니다...")
-    
+
+
 # 6. 설정 검증 함수
 def _validate_settings():
     """설정 검증 함수입니다. 필요한 설정이 누락되었는지 확인하고, 누락된 경우 예외를 발생시킵니다."""
     if not settings.upstage_api_key:
-        logger.warning("UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다.")
+        logger.warning(
+            "UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다."
+        )
 
     if settings.environment == "production" and settings.debug:
         logger.warning("Production 환경에서 DEBUG 모드가 활성화되어 있습니다!")
+
 
 # 2. FastAPI 애플리케이션 생성
 app = FastAPI(
@@ -68,10 +74,12 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
+
 # 8. endpoint 생성
 @app.get("/", tags=["Root"])
 async def root() -> RedirectResponse:
     return RedirectResponse(url="/ui")
+
 
 # 8.1 헬스 체크 및 서버 정보 endpoint 생성
 @app.get("/health", tags=["System"])
@@ -92,6 +100,7 @@ async def server_info() -> dict:
         "port": settings.port,
         "version": app.version,
     }
+
 
 app = gr.mount_gradio_app(app, create_demo(), path="/ui")
 

@@ -15,6 +15,7 @@ Repository 패턴을 사용하는 이유:
 """
 
 from loguru import logger
+
 from app.core.config import settings
 
 # Supabase 클라이언트 싱글톤
@@ -24,7 +25,7 @@ _supabase_client = None
 def get_supabase_client():
     """
     Supabase 클라이언트를 반환합니다 (싱글톤 패턴).
-    
+
     설정(settings)에 Supabase URL과 Key가 있을 때만 연결을 시도합니다.
     연결 실패 시 None을 반환합니다.
     """
@@ -33,6 +34,7 @@ def get_supabase_client():
     if _supabase_client is None and settings.supabase_url and settings.supabase_key:
         try:
             from supabase import create_client
+
             _supabase_client = create_client(
                 settings.supabase_url,
                 settings.supabase_key,
