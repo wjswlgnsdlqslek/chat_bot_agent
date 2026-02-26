@@ -15,10 +15,10 @@
 #   - SUPABASE_KEY: Supabase API 키
 name: Lumi Agent CI
 
-# TODO 1: 트리거 이벤트 설정. main 브랜치에 push되거나 PR이 생성될 때 실행
+# TODO 1: 트리거 이벤트 설정. master 브랜치에 push되거나 PR이 생성될 때 실행
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "app/**"
       - "tests/**"
@@ -27,7 +27,7 @@ on:
       - ".github/workflows/**"
       - "!**/*.md"
   pull_request:
-    branches: [main]
+    branches: [master]
     paths:
       - "app/**"
       - "tests/**"
