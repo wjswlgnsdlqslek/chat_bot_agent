@@ -171,7 +171,7 @@ async def rag_node(state: LumiState) -> dict:
             version = doc.get("metadata", {}).get("version", "?")
             similarity = doc.get("similarity", 0)
             logger.debug(
-                f"  [{i+1}] v{version} (sim: {similarity:.3f}): {doc['content'][:50]}..."
+                f"  [{i + 1}] v{version} (sim: {similarity:.3f}): {doc['content'][:50]}..."
             )
 
         logger.info(f"📚 [RAG] 검색 완료: {len(retrieved_docs)}개 문서")
