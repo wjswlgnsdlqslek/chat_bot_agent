@@ -30,11 +30,7 @@ class ToolExecutor:
                 return self._recommend_song(args)
 
             if tool_name == "get_weather":
-                return {
-                    "success": False,
-                    "tool": tool_name,
-                    "error": "get_weather Tool은 아직 준비 중이야.",
-                }
+                return self._get_weather(args)
 
             return {
                 "success": False,
@@ -63,16 +59,22 @@ class ToolExecutor:
             event_type=event_type,
         )
 
-        return {
-            "success": True,
-            "tool": "get_schedule",
+        data = {
+            "schedules": schedules,
             "count": len(schedules),
             "params": {
                 "start_date": start_date,
                 "end_date": end_date,
                 "event_type": event_type,
             },
-            "data": schedules,
+        }
+
+        return {
+            "success": True,
+            "tool": "get_schedule",
+            "count": len(schedules),
+            "params": data["params"],
+            "data": data,
         }
 
     async def _send_fan_letter(
@@ -110,30 +112,72 @@ class ToolExecutor:
             "success": True,
             "tool": "send_fan_letter",
             "letter_id": letter_id,
+            "data": {
+                "letter_id": letter_id,
+                "category": category,
+                "session_id": session_id or "anonymous",
+                "user_id": user_id,
+            },
         }
 
     def _recommend_song(self, args: dict[str, Any]) -> dict[str, Any]:
-        mood = str(args.get("mood") or "신남")
+        mood_input = str(args.get("mood") or "happy").strip()
+        mood_alias = {
+            "happy": "happy",
+            "신남": "happy",
+            "기쁨": "happy",
+            "sad": "sad",
+            "잔잔": "sad",
+            "우울": "sad",
+            "focus": "focus",
+            "집중": "focus",
+        }
+        mood = mood_alias.get(mood_input.lower(), "happy")
 
         playlist = {
-            "신남": ["NewJeans - Super Shy", "IVE - I AM", "LE SSERAFIM - ANTIFRAGILE"],
-            "잔잔": [
+            "happy": [
+                "NewJeans - Super Shy",
+                "IVE - I AM",
+                "LE SSERAFIM - ANTIFRAGILE",
+            ],
+            "sad": [
                 "AKMU - 어떻게 이별까지 사랑하겠어",
                 "아이유 - 밤편지",
                 "Paul Kim - 모든 날, 모든 순간",
             ],
-            "집중": [
+            "focus": [
                 "Nujabes - Aruarian Dance",
                 "Yiruma - River Flows in You",
                 "Lofi Girl Mix",
             ],
         }
 
-        picks = playlist.get(mood, playlist["신남"])
+        picks = playlist.get(mood, playlist["happy"])
 
         return {
             "success": True,
             "tool": "recommend_song",
             "mood": mood,
             "recommendations": picks,
+            "mock": True,
+            "data": {
+                "mood": mood,
+                "song": picks[0],
+                "recommendations": picks,
+            },
+        }
+
+    def _get_weather(self, args: dict[str, Any]) -> dict[str, Any]:
+        location = str(args.get("location") or "서울")
+        data = {
+            "location": location,
+            "temperature": "22C",
+            "condition": "맑음",
+        }
+
+        return {
+            "success": True,
+            "tool": "get_weather",
+            "mock": True,
+            "data": data,
         }
