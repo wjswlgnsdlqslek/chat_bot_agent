@@ -273,7 +273,7 @@ uv run pre-commit run --all-files
    - APIRouter가 생성되어 있는가?
    - GET / 엔드포인트가 구현되어 있는가?
    - 응답에 status, timestamp, version이 포함되어 있는가?
-4. cd.yml
+4. cd.yml -진행
    - push, workflow_dispatch 트리거가 설정되어 있는가?
    - GHCR 로그인 설정이 되어 있는가?
    - 이미지 빌드 & Push 설정이 되어 있는가?
