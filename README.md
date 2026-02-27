@@ -232,3 +232,58 @@ uv run pre-commit run --all-files
 
 1. pytest-cov 연동
 2. CI에서 커버리지 리포트 생성
+
+## 5일차
+
+### 학습 목표:
+
+1. Docker를 사용하여 애플리케이션을 컨테이너화합니다.
+2. Docker Compose로 컨테이너 환경을 구성합니다.
+3. GitHub Actions CD 파이프라인으로 EC2에 자동 배포합니다.
+
+### 미션 개요:
+
+1. 문제 상황: 로컬에서 잘 작동하던 애플리케이션이 서버에서는 동작하지 않습니다. "내 컴퓨터에서는 되는데..."라는 말이 반복됩니다.
+2. 목적: Docker 컨테이너로 일관된 실행 환경을 보장하고, CD 파이프라인으로 자동 배포를 구현합니다.
+
+### 미션 수행:
+
+| 단계   | 수행 내용                          | 예상 시간 |
+| ------ | ---------------------------------- | --------- |
+| Step 1 | 환경 설정(uv sync, env 설정)       | 5분       |
+| Step 2 | Dockerfile 작성                    | 30분      |
+| Step 3 | docker-compose.yml 작성            | 30분      |
+| Step 4 | healty.py 헬스체크 엔드포인트 작성 | 10분      |
+| Step 5 | cd.yml CD 파이프라인 작성          | 30분      |
+| Step 6 | Docker 빌드 및 EC2 배포 테스트     | 30분      |
+
+### 체크리스트
+
+1. Dockerfile
+   - 멀티스테이지 빌드를 사용하는가? (builder → runtime)
+   - uv를 사용하여 의존성을 설치하는가?
+   - non-root 유저로 실행하는가?
+   - HEALTHCHECK가 설정되어 있는가?
+2. docker-compose.yml
+   - 이미지와 빌드 설정이 되어 있는가?
+   - 포트 매핑이 올바른가? (8000:8000)
+   - 환경변수가 올바르게 전달되는가?
+   - 헬스체크와 재시작 정책이 설정되어 있는가?
+3. health.py
+   - APIRouter가 생성되어 있는가?
+   - GET / 엔드포인트가 구현되어 있는가?
+   - 응답에 status, timestamp, version이 포함되어 있는가?
+4. cd.yml
+   - push, workflow_dispatch 트리거가 설정되어 있는가?
+   - GHCR 로그인 설정이 되어 있는가?
+   - 이미지 빌드 & Push 설정이 되어 있는가?
+
+- 실행 확인
+  - `docker build -t lumi-agent .`가 성공하는가?
+  - `docker-compose up`으로 서버가 정상 시작하는가?
+  - `curl http://localhost:8000/api/v1/health/`가 200을 반환하는가?
+
+### 심화 미션
+
+1. 멀티 환경 배포- staging, production 환경 분리
+   - 환경별 docker-compose 파일 작성
