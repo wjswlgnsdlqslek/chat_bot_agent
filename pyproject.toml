@@ -1,3 +1,15 @@
+# LLMOps 1강 : LiteLLM
+# uv 패키지 관리자를 사용하는 프로젝트 설정 파일
+#
+# 사용법:
+#   uv sync          # 의존성 설치
+#   uv run uvicorn app.main:app --reload  # 서버 실행
+#   docker-compose up --build             # Docker로 실행
+#   uv run pytest tests/ -v               # 테스트 실행
+#
+# LLMOps 1강 변경사항:
+#   - LiteLLM 의존성 추가 (Retry + Fallback)
+
 [project]
 name = "chat_bot_agent"
 version = "0.1.0"
@@ -39,6 +51,9 @@ dependencies = [
 
     # SSE 스트리밍
     "sse-starlette>=2.1.0",              # Server-Sent Events 지원
+
+    # LiteLLM Gateway
+    "litellm>=1.50.0",                   # LLM 프록시/게이트웨이 (Retry + Fallback)
 ]
 
 [project.optional-dependencies]

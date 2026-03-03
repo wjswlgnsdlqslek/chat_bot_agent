@@ -11,20 +11,29 @@ LangGraph 그래프의 노드(Node) 정의
     4. response_node: 최종 응답 생성
 """
 
+import asyncio
 import json
 from datetime import datetime
 from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_upstage import ChatUpstage
+
+# from langchain_upstage import ChatUpstage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.config import settings
+from app.core.llm import (
+    get_llm,
+    get_router_llm,
+)
 from app.core.prompts import RAG_RESPONSE_PROMPT, RESPONSE_PROMPT, ROUTER_PROMPT
 from app.graph.state import LumiState
 from app.repositories.rag import get_rag_repository
 from app.tools.executor import ToolExecutor
+
+# Tool 실행 타임아웃 (초)
+# Tool이 이 시간 초과 시 TimeoutError 발생
+TOOL_EXECUTION_TIMEOUT = 10
 
 
 class RouterOutput(BaseModel):
@@ -43,21 +52,6 @@ class RouterOutput(BaseModel):
     )
     tool_args: dict | None = Field(
         default=None, description="도구 실행 인자 (intent=tool일 때만)"
-    )
-
-
-def get_llm() -> ChatUpstage:
-    """
-    Upstage Solar LLM 클라이언트를 반환합니다.
-
-    Returns:
-        ChatUpstage: Upstage Solar LLM 클라이언트
-    """
-    return ChatUpstage(
-        api_key=settings.upstage_api_key,
-        model=settings.llm_model,
-        timeout=30,
-        max_retries=2,
     )
 
 
@@ -96,7 +90,7 @@ async def router_node(state: LumiState) -> dict:
     logger.debug(f"사용자 입력: {user_input}")
 
     # TODO 2: LLM에 with_structured_output 적용
-    llm = get_llm()
+    llm = get_router_llm()
     structured_llm = llm.with_structured_output(RouterOutput)
 
     # 현재 날짜 정보 추가 (스케줄 조회 시 필요)
@@ -207,6 +201,8 @@ async def tool_node(state: LumiState) -> dict:
     tool_name = state["tool_name"]
     tool_args = state["tool_args"] or {}
 
+    logger.info(f"[Tool] Tool 실행: {tool_name}")
+
     # 방어 코드: tool_name이 None이면 에러 반환
     if not tool_name:
         logger.error("🔧 [Tool] tool_name이 None!")
@@ -217,21 +213,47 @@ async def tool_node(state: LumiState) -> dict:
             },
         }
 
-    logger.info(f"🔧 [Tool] Tool 실행: {tool_name}")
-
     # TODO 7: ToolExecutor로 Tool 실행
-    result = await tool_executor.execute(
-        tool_name=tool_name,
-        tool_args=tool_args,
-        session_id=state["session_id"],
-        user_id=state.get("user_id"),
-    )
+    # TODO 1: asyncio.wait_for로 타임아웃 처리
+    try:
+        result = await asyncio.wait_for(
+            tool_executor.execute(
+                tool_name=tool_name,
+                tool_args=tool_args,
+                session_id=state["session_id"],
+                user_id=state.get("user_id"),
+            ),
+            timeout=TOOL_EXECUTION_TIMEOUT,
+        )
 
-    logger.info(f"🔧 [Tool] 실행 결과: {result}")
+        logger.info(f"🔧 [Tool] 실행 결과: {result}")
 
-    return {
-        "tool_result": result,
-    }
+        return {
+            "tool_result": result,
+        }
+
+    except TimeoutError:
+        logger.error(
+            f"🔧 [Tool] '{tool_name}' 실행이 {TOOL_EXECUTION_TIMEOUT}초 초과로 타임아웃!"
+        )
+        return {
+            "tool_result": {
+                "success": False,
+                "error": f"'{tool_name}' 실행이 너무 오래 걸려서 중단했어요.",
+                "message": "잠시 후에 다시 시도해 주세요!",
+            }
+        }
+
+    except Exception as e:
+        # 일반 예외 → 친근한 메시지 (실제 에러는 로그에만)
+        logger.error(f"[Tool] 실행 실패: {tool_name} - {e}")
+        return {
+            "tool_result": {
+                "success": False,
+                "error": str(e),
+                "message": f"앗, '{tool_name}' 기능에 문제가 생겼어! 다시 시도해볼래?",
+            }
+        }
 
 
 # ============================================================
@@ -272,6 +294,17 @@ async def response_node(state: LumiState) -> dict:
     elif intent == "tool":
         # Tool 응답: Tool 실행 결과 포함
         tool_result = state["tool_result"]
+
+        # TODO 3: Tool 에러 시 바로 반환 (LLM 호출 생략)
+        # 여기에 Tool 에러 체크 코드를 추가하세요!
+        if tool_result.get("success") is False:
+            error_message = tool_result.get(
+                "message", "도구 실행 중 문제가 발생했어요."
+            )
+            logger.info(f"Tool 실행 실패: {error_message}")
+            return {
+                "messages": [AIMessage(content=error_message)],
+            }
 
         # Tool 결과를 자연스러운 응답으로 변환하기 위한 컨텍스트
         result_context = f"""
