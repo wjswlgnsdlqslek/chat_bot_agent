@@ -287,3 +287,56 @@ uv run pre-commit run --all-files
 
 1. 멀티 환경 배포- staging, production 환경 분리
    - 환경별 docker-compose 파일 작성
+
+## 6일차
+
+### 학습 목표:
+
+1. LLM 서비스 운영 시 발생할 수 있는 장애 상황을 이해한다.
+2. Gateway 패턴과 LiteLLM의 역할을 이해한다.
+3. Retry, Fallback, Timeout 전략을 구현한다.
+4. LiteLLM과 LangGraph를 통합한다.
+
+### 미션 개요:
+
+1. 문제 상황: LLM API는 언제든 실패할 수 있다. 네트워크 오류, API 과부하, 일시적 장애 등 다양한 이유로 요청이 실패하면 사용자 경험이 크게 저하된다.
+2. 목적: LiteLLM Gateway를 구현하여 Retry, Fallback, Timeout 전략으로 안정적인 LLM 서비스를 구축한다.
+
+### 미션 수행:
+
+| 단계   | 수행 내용                            | 예상 시간 |
+| ------ | ------------------------------------ | --------- |
+| Step 1 | 환경 설정(uv sync, env 설정)         | 5분       |
+| Step 2 | config.py 구현                       | 15분      |
+| Step 3 | llm.py 구현(LiteLLMChatModel 클래스) | 60분      |
+| Step 4 | nodes.py 구현                        | 30분      |
+| Step 5 | 테스트 및 검증                       | 20분      |
+
+### 체크리스트
+
+1. config.py
+   - USE_LITELLM 환경변수가 추가되어 있는가?
+   - LITELLM_NUM_RETRIES 환경변수가 추가되어 있는가?
+   - LITELLM_TIMEOUT 환경변수가 추가되어 있는가?
+   - LITELLM_FALLBACK_MODEL 환경변수가 추가되어 있는가?
+2. llm.py
+   - LiteLLMChatModel 클래스가 구현되어 있는가?
+   - Router 설정이 올바르게 되어 있는가?
+   - RetryPolicy가 적용되어 있는가?
+   - Fallback 모델이 설정되어 있는가?
+
+3. nodes.py
+   - asyncio.wait_for로 타임아웃이 적용되어 있는가?
+   - 타임아웃 발생 시 적절한 에러 핸들링이 있는가?
+
+- 실행 확인
+  - 서버가 정상 실행되는가?
+  - Primary 모델 실패 시 Fallback 모델이 동작하는가?
+  - Retry가 정상적으로 동작하는가?
+
+### 심화 미션
+
+1. 모델별 타임아웃 차별화
+   - 빠른 모델과 느린 모델에 다른 타임아웃 설정(예 : solar-pro2는 타임아웃 20초, solar-mini는 타임아웃 5초)
+   - 사용 사례별 타임아웃 최적화(예 : 라우터는 타임아웃을 짧게, 채팅은 길게)
+     - N초를 정의할 때, 채팅을 반복해서 데이터를 쌓고 그 분포를 보고결정하면 데이터로 근거를 제시하게 되는 것이라 이런 경험을 꼭 해보시는 것을 추천합니다.
