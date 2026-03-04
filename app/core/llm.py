@@ -116,13 +116,13 @@ class LiteLLMChatModel(BaseChatModel):
         from litellm import Router
         from litellm.router import RetryPolicy
 
-        # TODO 1: RetryPolicy 설정하기
+        # RetryPolicy 설정
         retry_policy = RetryPolicy(
             AuthenticationErrorRetries=3,
             BadRequestErrorRetries=0,
         )
 
-        # TODO 2: Primary 모델 설정 (model_list)
+        # Primary 모델 설정 (model_list)
         model_list = [
             {
                 "model_name": "primary",
@@ -135,7 +135,7 @@ class LiteLLMChatModel(BaseChatModel):
             }
         ]  # 이 리스트에 Primary 모델 설정을 추가해주세요
 
-        # TODO 3: Fallback 모델 설정 및 fallbacks 규칙
+        # Fallback 모델 설정 및 fallbacks 규칙
         fallbacks = None
         if settings.gemini_api_key:
             model_list.append(
@@ -152,7 +152,7 @@ class LiteLLMChatModel(BaseChatModel):
             fallbacks = [{"primary": ["fallback"]}]  # primary 실패 시 fallback으로 전환
             logger.debug("Fallback 모델 설정: Gemini 사용")
 
-        # TODO 4: Router 생성
+        # Router 생성
         router = Router(
             model_list=model_list,
             fallbacks=fallbacks,

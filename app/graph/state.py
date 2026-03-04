@@ -45,17 +45,17 @@ class LumiState(TypedDict):
         ... }
     """
 
-    # TODO 1: messages 필드 정의
+    # messages 필드 정의
     messages: Annotated[list[BaseMessage], add_messages]
-    # TODO 2: intent 필드 정의
+    # intent 필드 정의
     intent: Literal["chat", "rag", "tool"] | None
-    # TODO 3: retrieved_docs 필드 정의
+    # retrieved_docs 필드 정의
     retrieved_docs: list[str]
-    # TODO 4: tool 관련 필드 정의 (3개)
+    # tool 관련 필드 정의 (3개)
     tool_name: str | None
     tool_args: dict[str, Any] | None
     tool_result: dict[str, Any] | None
-    # TODO 5: 세션 정보 필드 정의 (2개)
+    # 세션 정보 필드 정의 (2개)
     session_id: str
     user_id: str | None
 

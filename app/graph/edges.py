@@ -43,7 +43,7 @@ def route_by_intent(state: LumiState) -> Literal["rag", "tool", "response"]:
 
     logger.debug(f"🔀 [Edge] 라우팅 결정: intent={intent}")
 
-    # TODO 1: intent에 따른 라우팅 구현
+    # intent에 따른 라우팅 구현
     if intent == "rag":
         return "rag"
     if intent == "tool":

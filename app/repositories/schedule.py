@@ -26,7 +26,7 @@ class ScheduleRepository:
     def __init__(self):
         """ScheduleRepository 초기화"""
         self.client = get_supabase_client()
-        # TODO: Supabase 클라이언트 연결 확인
+        # Supabase 클라이언트 연결 확인
         # - client가 None이면 ValueError를 발생시키세요
         # - 연결 성공 시 로그를 출력하세요
         if self.client is None:

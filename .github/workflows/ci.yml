@@ -15,7 +15,7 @@
 #   - SUPABASE_KEY: Supabase API 키
 name: Lumi Agent CI
 
-# TODO 1: 트리거 이벤트 설정. master 브랜치에 push되거나 PR이 생성될 때 실행
+# 트리거 이벤트 설정. master 브랜치에 push되거나 PR이 생성될 때 실행
 on:
   push:
     branches: [master]
@@ -44,7 +44,7 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
-  # TODO 2: lint job 작성
+  # lint job 작성
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
       - name: Run Ruff (format)
         run: uv run ruff format app/ tests/ --check
 
-  # TODO 3: test job 작성
+  # test job 작성
   test:
     name: Unit Tests
     runs-on: ubuntu-latest

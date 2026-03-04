@@ -28,7 +28,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # README.md: pyproject.toml의 readme 설정에 필요
 COPY pyproject.toml uv.lock* README.md ./
 
-# TODO 1: 의존성 설치 명령어 작성
 # 소스 복사 전 의존성만 설치해 Docker layer cache를 최대한 활용
 RUN uv sync --frozen --no-dev --no-cache --no-install-project
 
@@ -56,7 +55,7 @@ COPY app/ ./app/
 # pyproject.toml, README.md 복사 (uv run에 필요)
 COPY pyproject.toml README.md ./
 
-# TODO 2: 보안 설정 - non-root 유저 생성 및 권한 설정
+# 보안 설정 - non-root 유저 생성 및 권한 설정
 RUN useradd --create-home --shell /bin/bash appuser \
     && chown -R appuser:appuser /app
 
@@ -68,12 +67,12 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH"
 
-# TODO 3: 헬스체크 설정
+# 헬스체크 설정
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -fL http://localhost:8000/api/v1/health/ || exit 1
 
 # 포트 노출
 EXPOSE 8000
 
-# TODO 4: 서버 실행 명령어 작성(uv run)
+# 서버 실행 명령어 작성(uv run)
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

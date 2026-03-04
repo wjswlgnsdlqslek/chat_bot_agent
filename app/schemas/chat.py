@@ -55,7 +55,7 @@ class ChatResponse(BaseModel):
     )
 
 
-# TODO 1: StreamEventType 정의
+# StreamEventType 정의
 StreamEventType = Literal["thinking", "tool", "token", "response", "error", "done"]
 
 
@@ -103,8 +103,8 @@ class StreamEvent(BaseModel):
         ... )
     """
 
-    # TODO 2: type 필드 정의
-    type: StreamEventType = Field(..., description="envet type")
+    # type 필드 정의
+    type: StreamEventType = Field(..., description="event type")
 
     node: str | None = Field(
         default=None,
@@ -112,7 +112,7 @@ class StreamEvent(BaseModel):
         examples=["router", "rag", "tool", "response"],
     )
 
-    # TODO 3: content 필드 정의
+    # 3: content 필드 정의
     content: str | None = Field(
         default=None,
         description="텍스트 내용 (토큰 또는 최종 응답)",
@@ -148,7 +148,7 @@ class StreamEvent(BaseModel):
         """
         import orjson
 
-        # TODO 4: SSE 형식으로 변환. utf-8로 디코딩
+        # SSE 형식으로 변환. utf-8로 디코딩
         data = {k: v for k, v in self.model_dump().items() if v is not None}
         json_str = orjson.dumps(data).decode("utf-8")
 

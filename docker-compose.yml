@@ -27,18 +27,15 @@ services:
   # 메인 에이전트 서비스
   # =============================================================
   lumi-agent:
-    # TODO 1: 이미지 및 빌드 설정
     image: ${LUMI_IMAGE:-lumi-agent:latest}
     build:
       context: .
       dockerfile: Dockerfile
     container_name: lumi-agent
 
-    # TODO 2: 포트 매핑 (호스트:컨테이너)
     ports:
       - "8000:8000"
 
-    # TODO 3: 환경변수 설정
     environment:
       - UPSTAGE_API_KEY=${UPSTAGE_API_KEY}
       - SUPABASE_URL=${SUPABASE_URL}
@@ -46,7 +43,6 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false
 
-    # TODO 4: 헬스체크 및 재시작 정책 설정
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 30s
