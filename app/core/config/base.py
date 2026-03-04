@@ -1,3 +1,8 @@
+"""
+.env: api_key, 설정 변경이 잦은 변수
+config.py: .env에서 읽어온 변수들을 기반으로 애플리케이션에서 사용할 설정 정의
+"""
+
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,23 +21,22 @@ class BaseAppSettings(BaseSettings):
     port: int = 8000
     project_name: str = "prac"
 
-    # TODO 1: LiteLLM 사용 여부
     use_litellm: bool = True
-
-    # TODO 2: LiteLLM 재시도 횟수 설정 추가
     litellm_num_retries: int = 3
-
-    # TODO 3 : Gemini API 키 (Fallback용)
     gemini_api_key: str = ""
-
-    # TODO 4: LiteLLM Fallback 모델 설정 추가(gemini-2.5-flash)
     litellm_fallback_model: str = "gemini/gemini-2.5-flash"
-
-    # TODO 5: LiteLLM 타임아웃 설정 10초로 추가
     litellm_timeout: int = 10
 
     # 라우터 LLM 모델
     router_llm_model: str = "solar-mini"
+
+    supabase_connection_string: str = ""
+    discord_webhook_url: str = ""
+    enable_checkpointer: bool = True
+    checkpointer_type: Literal["postgres", "memory"] = "postgres"
+    enable_cost_tracking: bool = True
+    daily_cost_limit: float = 1.0
+    max_context_tokens: int = 4096
 
     model_config = SettingsConfigDict(
         env_file=".env",

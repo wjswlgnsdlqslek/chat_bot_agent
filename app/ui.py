@@ -1,13 +1,6 @@
 """
 Gradio 기반 채팅 인터페이스
 
-FastAPI에 마운트되어 /ui 경로에서 서비스됩니다.
-
-변경사항:
-    - Direct Call로 stream_tokens 함수 직접 호출
-    - 실시간 토큰 스트리밍 (thinking → tool → response)
-    - localhost/IPv6 문제 완전 해결
-
 접속:
     - 로컬: http://localhost:8000/ui
 """
@@ -17,6 +10,8 @@ import uuid
 
 import gradio as gr
 from loguru import logger
+
+from app.core.config import settings
 
 
 def sanitize_for_gradio_markdown(text: str) -> str:
@@ -498,23 +493,23 @@ META_TAGS = f"""
 
 def create_chat_handler():
     """
-    스트리밍 채팅 핸들러 생성 (Direct Call 방식)
+    🆕 3강: 스트리밍 채팅 핸들러 생성 (Direct Call 방식)
 
     HTTP 요청 대신 stream_with_status 함수를 직접 호출하여
     네트워크(localhost/port) 문제 없이 동작합니다.
 
-    진행 상태 + 토큰 스트리밍:
+    🆕 진행 상태 + 토큰 스트리밍:
         - 노드 상태: "🔀 루미 생각 중..." 채팅창에 표시
         - 토큰 스트리밍: 상태가 토큰으로 대체됨
 
     🔧 수정: 세션 ID를 파라미터로 받아 사용자별 격리
     """
-    # Direct Call - stream_with_status 직접 호출 (노드 상태 + 토큰)
+    # 🆕 Direct Call - stream_with_status 직접 호출 (노드 상태 + 토큰)
     from app.api.routes.chat import stream_with_status
 
     async def chat_with_lumi_stream(message: str, history: list, session_id: str):
         """
-        진행 상태 + 토큰 스트리밍으로 루미와 대화합니다. (Direct Call)
+        🆕 3강: 진행 상태 + 토큰 스트리밍으로 루미와 대화합니다. (Direct Call)
 
         stream_with_status 함수를 직접 호출하여
         진행 상태와 토큰을 실시간으로 받아 yield합니다.
@@ -522,7 +517,7 @@ def create_chat_handler():
         Args:
             message: 사용자 메시지
             history: 대화 히스토리
-            session_id: 사용자별 고유 세션 ID (gr.State로 관리)
+            session_id: 사용자별 고유 세션 ID (gr.BrowserState로 관리)
 
         이벤트 흐름:
             1. status: "🔀 루미 생각 중..." → 채팅창에 표시
@@ -534,7 +529,7 @@ def create_chat_handler():
             return
 
         try:
-            # Direct Call - stream_with_status 함수 직접 호출
+            # 🆕 Direct Call - stream_with_status 함수 직접 호출
             current_response = ""
 
             async for status, token, final, tool_used in stream_with_status(
@@ -542,7 +537,7 @@ def create_chat_handler():
                 session_id=session_id,
                 user_id=None,
             ):
-                # 진행 상태 메시지 (토큰 스트리밍 전에만 표시)
+                # 🆕 진행 상태 메시지 (토큰 스트리밍 전에만 표시)
                 if status and not current_response:
                     yield status
 
@@ -566,13 +561,13 @@ def create_chat_handler():
 
 
 # =============================================================
-# SSE 방식 - 프론트/백엔드 분리 시 사용
+# 🆕 3강: SSE 방식 - 프론트/백엔드 분리 시 사용
 # =============================================================
 
 
 def create_chat_handler_sse(api_base_url: str = "http://localhost:8000"):
     """
-    SSE 스트리밍 채팅 핸들러 (HTTP 방식)
+    🆕 3강: SSE 스트리밍 채팅 핸들러 (HTTP 방식)
 
     FastAPI의 /chat/stream 엔드포인트를 SSE로 호출합니다.
     프론트엔드와 백엔드가 분리된 실무 환경에서 사용하는 방식입니다.
@@ -592,7 +587,7 @@ def create_chat_handler_sse(api_base_url: str = "http://localhost:8000"):
 
     async def chat_with_lumi_sse(message: str, history: list, session_id: str):
         """
-        SSE로 루미와 대화합니다. (HTTP 방식)
+        🆕 3강: SSE로 루미와 대화합니다. (HTTP 방식)
 
         /chat/stream 엔드포인트를 호출하여 SSE 이벤트를 수신합니다.
         실무에서 프론트/백엔드 분리 시 이 방식을 사용합니다.
@@ -709,7 +704,6 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
     Returns:
         gr.Blocks: Gradio 앱
     """
-    from app.core.config import settings
 
     # API URL이 없으면 settings의 host/port 사용
     if not api_base_url:
@@ -737,12 +731,14 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
     # 🔄 방식 2: SSE (Gradio를 별도 프로세스로 실행할 때만!)
     # chat_with_lumi = create_chat_handler_sse(api_base_url)
 
-    # 🔧 세션 ID 생성 헬퍼 함수
+    # LLMOps 2강: 세션 ID는 gr.BrowserState로 localStorage에서 관리
+    # - 페이지 로드 시: localStorage에서 세션 ID 로드
+    # - 값 변경 시: localStorage에 자동 저장
+    # - 새로고침해도 유지됨!
+
     def generate_session_id() -> str:
-        """브라우저 탭마다 고유한 세션 ID 생성"""
-        new_id = f"gradio-{uuid.uuid4().hex[:8]}"
-        logger.info(f"🔑 새 Gradio 세션 생성: {new_id}")
-        return new_id
+        """새 세션 ID 생성"""
+        return f"lumi-{uuid.uuid4().hex[:8]}"
 
     with gr.Blocks(
         title="루미(LUMI) - 버추얼 아이돌 AI 에이전트",
@@ -752,9 +748,14 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
         # CSS 직접 삽입 (마운트 시에도 적용되도록)
         gr.HTML(f"<style>{CUSTOM_CSS}</style>")
 
-        # 🔧 수정: gr.State로 사용자별 세션 ID 관리
-        # 페이지 로드 시 고유한 세션 ID가 생성되어 각 탭/사용자가 격리됨
-        session_state = gr.State(generate_session_id)
+        # LLMOps 2강: gr.BrowserState로 세션 ID 관리 (localStorage 자동 연동)
+        # - storage_key와 secret을 하드코딩해야 서버 재시작 후에도 유지됨
+        session_storage = gr.BrowserState(
+            "",
+            storage_key="lumi_session_id",  # localStorage 키 고정
+            secret="lumi-agent-session-secret-key",  # 암호화 키 고정 (서버 재시작 후에도 복호화 가능)
+        )
+        session_state = gr.State(value=None)
 
         # 헤더
         gr.HTML(
@@ -808,7 +809,7 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
         with gr.Row():
             clear_btn = gr.Button("🗑️ 대화 초기화", elem_classes="clear-btn")
 
-        # 스트리밍 이벤트 핸들러
+        # 🆕 3강: 스트리밍 이벤트 핸들러
         def add_user_message(message: str, chat_history: list) -> tuple:
             """1단계: 사용자 메시지 먼저 표시"""
             if not message.strip():
@@ -816,9 +817,9 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
             chat_history.append({"role": "user", "content": message})
             return "", chat_history
 
-        async def get_bot_response_stream(chat_history: list, session_id: str):
+        async def get_bot_response_stream(chat_history: list, session_id: str | None):
             """
-            스트리밍 봇 응답 생성
+            🆕 3강: 스트리밍 봇 응답 생성
 
             chat_with_lumi가 응답을 yield할 때마다 채팅창 업데이트.
             - 먼저 "🔀 루미 생각 중..." 표시
@@ -826,6 +827,12 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
 
             🔧 수정: session_id를 파라미터로 받아 사용자별 격리
             """
+            # LLMOps 2강: session_id가 없으면 기본값 사용
+            if not session_id:
+                session_id = "default"
+                logger.warning("⚠️ 세션 ID가 없어 기본값 사용")
+            else:
+                logger.debug(f"🔑 세션 ID: {session_id}")
             if not chat_history:
                 yield chat_history
                 return
@@ -853,7 +860,7 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
                 yield chat_history
                 return
 
-            # 스트리밍 응답 생성
+            # 🆕 스트리밍 응답 생성
             chat_history.append({"role": "assistant", "content": ""})
 
             # 🔧 수정: session_id를 chat_with_lumi에 전달
@@ -864,7 +871,7 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
                 chat_history[-1] = {"role": "assistant", "content": partial_response}
                 yield chat_history
 
-        # 전송 이벤트 - 스트리밍 체이닝
+        # 🆕 3강: 전송 이벤트 - 스트리밍 체이닝
         # 🔧 수정: session_state 추가 및 concurrency_limit=None으로 병렬 처리 허용
         msg.submit(add_user_message, [msg, chatbot], [msg, chatbot]).then(
             get_bot_response_stream,
@@ -885,12 +892,34 @@ def create_demo(api_base_url: str | None = None) -> gr.Blocks:
         btn3.click(lambda: "이번 주 방송 일정 알려줘", outputs=msg)
         btn4.click(lambda: "신나는 노래 추천해줘", outputs=msg)
 
-        # 🔧 수정: 클리어 시 새 세션 ID 생성 (대화 히스토리 초기화와 함께)
+        # LLMOps 2강: 페이지 로드 시 localStorage에서 세션 ID 로드
+        def on_load(stored_session_id: str):
+            """페이지 로드 시 세션 ID 로드 (BrowserState에서)"""
+            if stored_session_id:
+                logger.info(f"🔑 기존 세션 로드 (localStorage): {stored_session_id}")
+                return stored_session_id, stored_session_id
+            else:
+                new_session_id = generate_session_id()
+                logger.info(f"🔑 새 세션 생성: {new_session_id}")
+                return new_session_id, new_session_id
+
+        demo.load(
+            fn=on_load,
+            inputs=[session_storage],
+            outputs=[session_storage, session_state],  # 둘 다 업데이트
+        )
+
+        # LLMOps 2강: 클리어 시 새 세션 ID 생성
         def clear_chat():
             """대화 초기화 및 새 세션 ID 생성"""
             new_session_id = generate_session_id()
-            return [], new_session_id
+            logger.info(f"🗑️ 대화 초기화, 새 세션: {new_session_id}")
+            return [], new_session_id, new_session_id
 
-        clear_btn.click(clear_chat, outputs=[chatbot, session_state])
+        clear_btn.click(
+            fn=clear_chat,
+            inputs=None,
+            outputs=[chatbot, session_storage, session_state],
+        )
 
     return demo

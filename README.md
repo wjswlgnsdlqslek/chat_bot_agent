@@ -340,3 +340,55 @@ uv run pre-commit run --all-files
    - 빠른 모델과 느린 모델에 다른 타임아웃 설정(예 : solar-pro2는 타임아웃 20초, solar-mini는 타임아웃 5초)
    - 사용 사례별 타임아웃 최적화(예 : 라우터는 타임아웃을 짧게, 채팅은 길게)
      - N초를 정의할 때, 채팅을 반복해서 데이터를 쌓고 그 분포를 보고결정하면 데이터로 근거를 제시하게 되는 것이라 이런 경험을 꼭 해보시는 것을 추천합니다.
+
+## 7일차
+
+### 학습 목표:
+
+1. LangGraph 체크포인터로 대화 상태를 영구 저장한다.
+2. tiktoken으로 정확한 토큰 수를 계산한다.
+3. CostTracker로 비용을 추적하고 Discord 알림을 설정한다.
+4. 메시지 트리밍으로 Context Window를 관리한다.
+
+### 미션 개요:
+
+1. 문제 상황: 새로고침하면 대화가 사라지고, LLM 비용이 얼마나 나가는지 모른다. 대화가 길어지면 Context Window를 초과하여 오류가 발생한다.
+2. 목적: 상태 관리로 대화를 영구 저장하고, 비용 추적으로 예산을 관리하며, 메시지 트리밍으로 Context Window를 최적화한다.
+
+### 미션 수행:
+
+| 단계   | 수행 내용                    | 예상 시간 |
+| ------ | ---------------------------- | --------- |
+| Step 1 | 환경 설정(uv sync, env 설정) | 5분       |
+| Step 2 | config.py 구현               | 15분      |
+| Step 3 | checkpointer.py 구현         | 30분      |
+| Step 4 | token_counter.py 구현        | 35분      |
+| Step 5 | cost_tracker.py 구현         | 35분      |
+| Step 6 | nodes.py 구현                | 20분      |
+| Step 7 | 테스트 및 검증               | 20분      |
+
+### 체크리스트
+
+1. config.py
+   - daily_cost_limit 필드가 추가되어 있는가? (타입: float, 기본값: 1.0)
+   - max_context_tokens 필드가 추가되어 있는가? (타입: int, 기본값: 3000)
+
+2. checkpointer.py
+   - MemorySaver 반환 조건이 구현되어 있는가?
+   - AsyncPostgresSaver 반환이 구현되어 있는가?
+
+3. token_counter.py
+   - tiktoken encoding.encode()를 사용하여 토큰 수를 계산하는가?
+
+4. cost_tracker.py
+   - Discord Webhook payload가 올바른 구조로 구성되어 있는가?
+5. nodes.py
+   - trim_messages()의 for 루프가 구현되어 있는가?
+   - 최근 메시지부터 역순으로 토큰을 계산하고 리스트에 추가하는가?
+
+### 심화 미션
+
+1. 사용자별 비용 한도 설정
+   - 로그인(Google Oauth 설정을 활용해서)을 구현해도 괜찮고, 간단하게 회원가입을 구현하고 설정해도 좋습니다
+2. 한도 초과 시 사용 제한
+   - 사용량 이상이 되면 요청이 와도 오류 메시지를 반환하도록 해주세요

@@ -1,14 +1,9 @@
-# LLMOps 1강 : LiteLLM
-# uv 패키지 관리자를 사용하는 프로젝트 설정 파일
-#
 # 사용법:
 #   uv sync          # 의존성 설치
 #   uv run uvicorn app.main:app --reload  # 서버 실행
 #   docker-compose up --build             # Docker로 실행
 #   uv run pytest tests/ -v               # 테스트 실행
 #
-# LLMOps 1강 변경사항:
-#   - LiteLLM 의존성 추가 (Retry + Fallback)
 
 [project]
 name = "chat_bot_agent"
@@ -33,7 +28,7 @@ dependencies = [
     "fastapi>=0.125.0",                  # 비동기 웹 프레임워크
     "uvicorn[standard]>=0.32.0",         # ASGI 서버
 
-    # ===== Database & Cache =====
+    # ===== Database =====
     "supabase>=2.20.0",                  # Supabase Python 클라이언트
 
     # ===== Configuration =====
@@ -54,6 +49,11 @@ dependencies = [
 
     # LiteLLM Gateway
     "litellm>=1.50.0",                   # LLM 프록시/게이트웨이 (Retry + Fallback)
+
+    # ===== 🆕 LLMOps 2강: 체크포인터 & 비용 관리 =====
+    "tiktoken>=0.7.0",                   # 토큰 카운팅 (OpenAI 호환)
+    "langgraph-checkpoint-postgres>=2.0.0", # PostgreSQL 체크포인터 (Production용)
+    "psycopg[binary]>=3.1.0",            # PostgreSQL 드라이버 (binary 버전, libpq 불필요)
 ]
 
 [project.optional-dependencies]
