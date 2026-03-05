@@ -42,6 +42,19 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false
+      # ===== LLMOps 1강: LiteLLM =====
+      - USE_LITELLM=${USE_LITELLM:-true}
+      # ===== LLMOps 2강: 체크포인터 =====
+      - ENABLE_CHECKPOINTER=${ENABLE_CHECKPOINTER:-true}
+      - CHECKPOINTER_TYPE=${CHECKPOINTER_TYPE:-postgres}
+      # ===== LLMOps 2강: 비용 관리 =====
+      - ENABLE_COST_TRACKING=${ENABLE_COST_TRACKING:-true}
+      - DAILY_COST_LIMIT=${DAILY_COST_LIMIT:-10.0}
+      - MAX_CONTEXT_TOKENS=${MAX_CONTEXT_TOKENS:-3000}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      # ===== LLMOps 3강 : Lanfuse =====
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]

@@ -17,6 +17,8 @@ requires-python = ">=3.12"
 # - FastAPI: 비동기 웹 프레임워크
 # - Upstage: Solar LLM API
 # - Supabase: PostgreSQL + pgvector 데이터베이스
+# - 🆕 Langfuse: Observability 플랫폼
+
 dependencies = [
     # ===== LangGraph & LangChain =====
     "langgraph>=1.0.0",                  # 그래프 기반 에이전트 프레임워크
@@ -50,10 +52,14 @@ dependencies = [
     # LiteLLM Gateway
     "litellm>=1.50.0",                   # LLM 프록시/게이트웨이 (Retry + Fallback)
 
-    # ===== 🆕 LLMOps 2강: 체크포인터 & 비용 관리 =====
+    # ===== LLMOps 2강: 체크포인터 & 비용 관리 =====
     "tiktoken>=0.7.0",                   # 토큰 카운팅 (OpenAI 호환)
     "langgraph-checkpoint-postgres>=2.0.0", # PostgreSQL 체크포인터 (Production용)
     "psycopg[binary]>=3.1.0",            # PostgreSQL 드라이버 (binary 버전, libpq 불필요)
+
+    # ===== 🆕 LLMOps 3강: Observability =====
+    "langfuse>=3.0.0", # LLMOps Observability 플랫폼
+    "langchain>=1.2.6",
 ]
 
 [project.optional-dependencies]

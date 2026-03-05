@@ -78,7 +78,33 @@ async def lifespan(app: FastAPI):
             logger.error(f"체크포인터 초기화 실패: {e}")
             logger.warning("⚠️ 체크포인터 없이 서버 시작 (대화 이어가기 불가)")
 
+    if settings.enable_langfuse:
+        try:
+            from app.core.tracing import init_langfuse
+
+            langfuse_client = init_langfuse()
+            if langfuse_client:
+                logger.info(
+                    f"✅ Langfuse 트레이싱 초기화 완료(host: {settings.langfuse_host})"
+                )
+            else:
+                logger.warning("⚠️ Langfuse 트레이싱 초기화 실패")
+        except Exception as e:
+            logger.error(f"Langfuse 초기화 실패: {e}")
+            logger.warning("⚠️ Langfuse 트레이싱 비활성화 (추적 불가)")
+    else:
+        logger.info("Langfuse 트레이싱 비활성화")
+
     yield  # 이 지점에서 서버가 요청을 처리함
+
+    if settings.enable_langfuse:
+        try:
+            from app.core.tracing import flush_langfuse
+
+            flush_langfuse()
+            logger.info("✅ Langfuse 트레이싱 데이터 플러시 완료")
+        except Exception as e:
+            logger.warning(f"Langfuse 트레이싱 데이터 플러시 중 오류: {e}")
 
     # ===== 서버 종료 시 실행 =====
     logger.info("Lumi Agent 서버를 종료합니다...")
@@ -103,15 +129,13 @@ def _validate_settings():
     """
     if not settings.upstage_api_key:
         logger.warning(
-            "⚠️ UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다."
+            "UPSTAGE_API_KEY가 설정되지 않았습니다. LLM 기능을 사용할 수 없습니다."
         )
 
     if not settings.supabase_url or not settings.supabase_key:
-        logger.warning(
-            "⚠️ Supabase 설정이 완료되지 않았습니다. Mock 데이터를 사용합니다."
-        )
+        logger.warning("Supabase 설정이 완료되지 않았습니다. Mock 데이터를 사용합니다.")
 
-    # 🆕 LLMOps 2강: PostgreSQL 체크포인터 사용 시 연결 문자열 확인
+    # LLMOps 2강: PostgreSQL 체크포인터 사용 시 연결 문자열 확인
     if (
         settings.enable_checkpointer
         and settings.checkpointer_type == "postgres"
@@ -123,7 +147,7 @@ def _validate_settings():
             "MemorySaver로 대체됩니다."
         )
 
-    # 🆕 LLMOps 2강: 비용 추적 활성화 시 Supabase 필요
+    # LLMOps 2강: 비용 추적 활성화 시 Supabase 필요
     if settings.enable_cost_tracking and (
         not settings.supabase_url or not settings.supabase_key
     ):
@@ -135,6 +159,14 @@ def _validate_settings():
     # Production 환경에서는 디버그 모드 비활성화 필요
     if settings.environment == "production" and settings.debug:
         logger.warning("⚠️ Production 환경에서 DEBUG 모드가 활성화되어 있습니다!")
+
+    # 🆕 LLMOps 3강: Langfuse 설정 검증
+    if settings.enable_langfuse:
+        if not settings.langfuse_public_key or not settings.langfuse_secret_key:
+            logger.warning(
+                "ENABLE_LANGFUSE=true이지만 LANGFUSE_PUBLIC_KEY 또는 LANGFUSE_SECRET_KEY가 설정되지 않았습니다. "
+                "Langfuse가 비활성화됩니다."
+            )
 
 
 # ===== FastAPI 애플리케이션 생성 =====
@@ -158,7 +190,7 @@ app = FastAPI(
     - Supabase: 데이터베이스
 
     """,
-    version="0.7.0",  # 🆕 LLMOps 2강
+    version="0.8.0",  # 🆕 LLMOps 2강
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",

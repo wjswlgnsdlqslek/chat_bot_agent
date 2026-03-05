@@ -392,3 +392,67 @@ uv run pre-commit run --all-files
    - 로그인(Google Oauth 설정을 활용해서)을 구현해도 괜찮고, 간단하게 회원가입을 구현하고 설정해도 좋습니다
 2. 한도 초과 시 사용 제한
    - 사용량 이상이 되면 요청이 와도 오류 메시지를 반환하도록 해주세요
+
+## 8일차
+
+### 학습 목표:
+
+1. Observability가 왜 필요한지 이해한다.
+2. Langfuse의 핵심 개념을 이해한다. (Trace, Generation, Span, Session)
+3. CallbackHandler로 LangGraph와 Langfuse를 연동한다.
+
+### 미션 개요:
+
+1. 문제 상황: LLM 애플리케이션은 내부 동작이 불투명하다. 어떤 노드에서 시간이 오래 걸리는지, 토큰을 얼마나 사용했는지, 오류가 어디서 발생했는지 알기 어렵다.
+2. 목적: Langfuse를 연동하여 LLM 애플리케이션의 모든 동작을 추적하고 분석할 수 있는 Observability를 구축한다.
+
+### 미션 수행:
+
+| 단계   | 수행 내용                    | 예상 시간 |
+| ------ | ---------------------------- | --------- |
+| Step 1 | 환경 설정(uv sync, env 설정) | 5분       |
+| Step 2 | config.py 구현               | 5분       |
+| Step 3 | tracing.py 구현              | 30분      |
+| Step 4 | chat.py 구현                 | 20분      |
+| Step 5 | nodes.py 구현                | 30분      |
+| Step 6 | main.py 구현                 | 10분      |
+| Step 7 | 테스트 및 검증               | 20분      |
+
+### 체크리스트
+
+1. config.py
+   - LANGFUSE_PUBLIC_KEY 환경변수가 추가되어 있는가?
+   - LANGFUSE_SECRET_KEY 환경변수가 추가되어 있는가?
+   - LANGFUSE_HOST 환경변수가 추가되어 있는가?
+
+2. tracing.py
+   - init_langfuse() 함수가 구현되어 있는가?
+   - get_langfuse_handler() 함수가 구현되어 있는가?
+   - create_langfuse_config() 함수가 구현되어 있는가?
+   - trace_llm_generation() 함수가 구현되어 있는가?
+
+3. chat.py
+   - create_langfuse_config() 호출이 추가되어 있는가?
+   - config가 그래프 실행 시 전달되는가?
+   - session_id가 올바르게 설정되는가?
+
+4. nodes.py
+   - config 파라미터가 추가되어 있는가?
+   - trace_llm_generation() 호출이 추가되어 있는가?
+   - 각 노드에서 적절한 span 이름이 사용되는가?
+
+5. main.py
+   - 앱 시작 시 init_langfuse()가 호출되는가?
+   - 앱 종료 시 flush_langfuse()가 호출되는가?
+
+### 심화 미션
+
+1. 사Discord 추가 알림 전송하기
+   - Discord 알림 추가하기
+   - 특정 상황에 Discord 알림 전송하기(예 : 첫 세션 생길 때 전송하기)
+
+## scale-up
+
+1. Tool 추가
+2. 멀티 에이전트
+3. 채팅 -> 이미지 또는 버추얼

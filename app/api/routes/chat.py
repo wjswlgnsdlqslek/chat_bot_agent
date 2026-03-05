@@ -23,6 +23,7 @@ from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, Huma
 from loguru import logger
 
 from app.core.config import settings  # 🆕 7강: 설정 확인용
+from app.core.tracing import create_langfuse_config
 from app.graph import get_lumi_graph
 from app.graph.graph import get_lumi_graph_with_memory  # 🆕 7강: 체크포인터 포함 그래프
 from app.schemas.chat import ChatRequest, ChatResponse, StreamEvent
@@ -44,7 +45,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
     사용자 메시지를 LangGraph 에이전트로 처리하고 응답을 반환합니다.
 
-    🆕 7강: 체크포인터 연동
+    LLMOps 2강: 체크포인터 연동
         - thread_id로 대화를 이어갈 수 있음
         - 같은 session_id로 호출하면 이전 대화 기억
 
@@ -69,7 +70,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     )
 
     try:
-        # 🆕 7강: 체크포인터 활성화 여부에 따라 그래프 선택
+        # LLMOps 2강: 체크포인터 활성화 여부에 따라 그래프 선택
         if settings.enable_checkpointer:
             # Step 1: 체크포인터가 포함된 그래프 가져오기
             graph = await get_lumi_graph_with_memory()
@@ -86,8 +87,18 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "user_id": request.user_id,
             }
 
-            # 🆕 7강: thread_id로 대화 세션 구분
-            config = {"configurable": {"thread_id": request.session_id}}
+            # LLMOps 2강: thread_id로 대화 세션 구분
+            # Langfuse config 생성 및 병합
+            # create_langfuse_config()로 Langfuse config를 생성하고 아래 config에 병합하세요 (session_id, user_id 전달)
+            langfuse_config = create_langfuse_config(
+                session_id=request.session_id,
+                user_id=request.user_id,
+            )
+
+            config = {
+                "configurable": {"thread_id": request.session_id},
+                **langfuse_config,
+            }
 
             # Step 3: 그래프 실행 (체크포인터가 자동으로 상태 저장/복원)
             logger.debug(f"🔄 LangGraph 실행 시작 (thread_id: {request.session_id})")
@@ -108,8 +119,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "user_id": request.user_id,
             }
 
+            # Langfuse config 생성 (체크포인터 없을 때)
+            config = create_langfuse_config(
+                session_id=request.session_id,
+                user_id=request.user_id,
+            )
+
             logger.debug("🔄 LangGraph 실행 시작")
-            final_state = await graph.ainvoke(initial_state)
+            final_state = await graph.ainvoke(initial_state, config=config)
             logger.debug("✅ LangGraph 실행 완료")
 
         # Step 4: 최종 응답 추출
@@ -184,7 +201,13 @@ async def stream_with_status(
             "user_id": user_id,
         }
         # thread_id로 대화 세션 구분
-        config = {"configurable": {"thread_id": session_id}}
+        # 스트리밍용 Langfuse config 병합
+        langfuse_config = create_langfuse_config(
+            session_id=session_id,
+            user_id=user_id,
+        )
+
+        config = {"configurable": {"thread_id": session_id}, **langfuse_config}
         logger.debug(f"📜 [StreamWithStatus] 체크포인터 모드 (thread_id: {session_id})")
     else:
         graph = get_lumi_graph()
@@ -200,7 +223,11 @@ async def stream_with_status(
             "session_id": session_id,
             "user_id": user_id,
         }
-        config = None
+        # 스트리밍용 Langfuse config
+        config = create_langfuse_config(
+            session_id=session_id,
+            user_id=user_id,
+        )
         logger.debug(
             f"📜 [StreamWithStatus] 인메모리 모드, 히스토리: {len(history)}개 메시지"
         )
@@ -218,17 +245,14 @@ async def stream_with_status(
         "response": "💬 응답 작성 중...",
     }
 
-    # 🔑 핵심: 두 모드 동시 사용! (updates + messages)
+    # 핵심: 두 모드 동시 사용! (updates + messages)
     # stream_mode가 리스트일 때: (mode_name, event) 튜플로 반환됨
-    # 🆕 7강: config 전달 (체크포인터 사용 시)
+    # LLMOps 2강: config 전달 (체크포인터 사용 시)
     try:
         async for mode, event in graph.astream(
             initial_state, config=config, stream_mode=["updates", "messages"]
         ):
-            # ========================================
-            # 📍 노드 스트리밍 (stream_mode="updates")
-            # 노드가 완료될 때마다 이벤트 발생
-            # ========================================
+            # 노드 스트리밍 (stream_mode="updates") : 노드가 완료될 때마다 이벤트 발생
             if mode == "updates":
                 # event = {"node_name": {출력 상태}}
                 for node_name, node_output in event.items():
@@ -242,7 +266,7 @@ async def stream_with_status(
                     if node_name == "tool" and node_output:
                         final_tool_name = node_output.get("tool_name")
 
-                    # 🆕 6강: response 노드에서 fallback 응답 확인
+                    # response 노드에서 fallback 응답 확인
                     # LLM 스트리밍이 실패하면 토큰이 안 오지만,
                     # response_node는 에러 시 fallback 메시지를 반환함
                     if node_name == "response" and node_output:
@@ -256,10 +280,7 @@ async def stream_with_status(
                                     f"📍 [StreamWithStatus] Fallback 응답 감지: {final_response[:50]}..."
                                 )
 
-            # ========================================
-            # 📍 토큰 스트리밍 (stream_mode="messages")
-            # LLM이 토큰을 생성할 때마다 이벤트 발생
-            # ========================================
+            # 토큰 스트리밍 (stream_mode="messages") : LLM이 토큰을 생성할 때마다 이벤트 발생
             elif mode == "messages":
                 # event = (message, metadata) 튜플
                 msg, meta = event
@@ -277,7 +298,7 @@ async def stream_with_status(
                         yield (None, token, None, None)
 
     except Exception as e:
-        # 🆕 6강: 스트리밍 중 에러 발생 시 사용자에게 알림
+        # LLMOps 1강: 스트리밍 중 에러 발생 시 사용자에게 알림
         logger.error(f"❌ [StreamWithStatus] 스트리밍 오류: {e}")
         error_message = (
             "😢 AI 서비스에 일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요!"
@@ -285,7 +306,7 @@ async def stream_with_status(
         yield (None, None, error_message, None)
         return  # 에러 발생 시 여기서 종료
 
-    # 🆕 7강: 체크포인터 비활성화 시에만 SESSION_STORE에 저장
+    # LLMOps 2강: 체크포인터 비활성화 시에만 SESSION_STORE에 저장
     # 체크포인터 활성화 시 체크포인터가 자동으로 상태 저장
     if final_response and not settings.enable_checkpointer:
         if session_id not in SESSION_STORE:
@@ -300,15 +321,11 @@ async def stream_with_status(
     yield (None, None, final_response, final_tool_name)
 
 
-# =============================================================
-# 🆕 3강: SSE 스트리밍 엔드포인트 (핵심 10줄!)
-# =============================================================
-
-
+# SSE 스트리밍 엔드포인트
 @router.post("/stream")
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
     """
-    🆕 3강: SSE 노드 + 토큰 스트리밍 채팅 엔드포인트
+    SSE 노드 + 토큰 스트리밍 채팅 엔드포인트
 
     stream_with_status를 사용하여 노드 상태(thinking)와 토큰을 동시에 스트리밍합니다.
 
@@ -336,15 +353,15 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 request.session_id,
                 request.user_id,
             ):
-                # 🆕 노드 상태 (thinking 이벤트)
+                # 노드 상태 (thinking 이벤트)
                 if status:
                     yield StreamEvent(type="thinking", content=status).to_sse()
 
-                # 토큰 스트리밍
+                # 토큰 스트리밍 (token 이벤트)
                 if token:
                     yield StreamEvent(type="token", content=token).to_sse()
 
-                # 최종 응답
+                # 최종 응답 (response 이벤트)
                 if final:
                     yield StreamEvent(
                         type="response", content=final, tool_used=tool_used
@@ -364,6 +381,6 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Nginx 버퍼링 비활성화
+            "X-Accel-Buffering": "no",
         },
     )

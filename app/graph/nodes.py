@@ -22,6 +22,7 @@ from datetime import datetime
 from typing import Literal
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -35,6 +36,7 @@ from app.core.prompts import RAG_RESPONSE_PROMPT, RESPONSE_PROMPT, ROUTER_PROMPT
 
 # 🆕 LLMOps 2강: 토큰 카운터, 비용 추적, 대화 저장
 from app.core.token_counter import count_messages_tokens, count_tokens
+from app.core.tracing import trace_llm_generation
 from app.graph.state import LumiState
 from app.repositories.conversation import get_conversation_repository
 from app.repositories.rag import get_rag_repository  # RAG Repository 추가
@@ -139,7 +141,7 @@ def trim_messages(
 # ============================================================
 # 🔀 Router Node: 사용자 의도 분류
 # ============================================================
-async def router_node(state: LumiState) -> dict:
+async def router_node(state: LumiState, config: RunnableConfig) -> dict:
     logger.info("🔀 [Router] 의도 분류 시작")
 
     # Step 1: 마지막 사용자 메시지 추출
@@ -161,7 +163,7 @@ async def router_node(state: LumiState) -> dict:
 
     try:
         # with_structured_output 덕분에 result가 RouterOutput 타입!
-        result = await structured_llm.ainvoke(messages)
+        result = await structured_llm.ainvoke(messages, config=config)
 
         # tool_name 정리 (따옴표, 여러 도구 나열된 경우 첫 번째만)
         tool_name = result.tool_name
@@ -342,7 +344,7 @@ async def tool_node(state: LumiState) -> dict:
 # ============================================================
 # 💬 Response Node: 최종 응답 생성 (🆕 LLMOps 2강: 비용 추적 + 대화 저장)
 # ============================================================
-async def response_node(state: LumiState) -> dict:
+async def response_node(state: LumiState, config: RunnableConfig) -> dict:
     logger.info(f"💬 [Response] 응답 생성 시작 (intent: {state['intent']})")
 
     llm = get_llm()
@@ -427,7 +429,7 @@ async def response_node(state: LumiState) -> dict:
     input_tokens = count_messages_tokens(messages)
 
     try:
-        response = await llm.ainvoke(messages)
+        response = await llm.ainvoke(messages, config=config)
         ai_response = response.content
 
         # 🔧 실제 사용된 모델 이름 추출 (fallback 시 Gemini 모델명)
@@ -455,6 +457,20 @@ async def response_node(state: LumiState) -> dict:
             )
         except Exception as e:
             logger.warning(f"비용 추적 실패 (무시): {e}")
+
+        try:
+            trace_llm_generation(
+                session_id=state["session_id"],
+                model=used_model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                input_content=user_input,
+                output_content=ai_response,
+                user_id=state["user_id"],
+            )
+
+        except Exception as e:
+            logger.warning(f"LLM 생성 추적 실패 (무시): {e}")
 
         # 🆕 LLMOps 2강: 대화 저장
         try:

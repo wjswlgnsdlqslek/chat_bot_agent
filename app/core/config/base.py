@@ -38,6 +38,12 @@ class BaseAppSettings(BaseSettings):
     daily_cost_limit: float = 1.0
     max_context_tokens: int = 4096
 
+    enable_langfuse: bool = True
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_flush_interval: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
